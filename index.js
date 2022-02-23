@@ -99,7 +99,7 @@ async function update_delivery_date(order_sf_id, date_change) {
 
 async function sendText(to_number) {
   var urlencodedTwilio = new URLSearchParams();
-  urlencodedTwilio.append("Body", "A few exemples of order numbers you can ask the status or change the delivery -> 1480 \nTo check the order -> 1346");
+  urlencodedTwilio.append("Body", "A few exemples of order numbers you can ask about.\nStatus or change the delivery -> 1480\nTo check the order -> 1346 / 1359");
   urlencodedTwilio.append("To", `+${to_number}`);
   urlencodedTwilio.append("From", "+18454154396");
 
@@ -118,7 +118,7 @@ process.env.DEBUG = 'dialogflow:debug'; // enables lib debugging statements
  
 
 exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, response) => {
-const agent = new WebhookClient({
+ const agent = new WebhookClient({
     request,
     response
   });
@@ -130,7 +130,7 @@ const agent = new WebhookClient({
     const status = await getOrderStatus(order_number);
     if (status.totalSize == 0) {
 
-      agent.add(`We could not find your order number, please try again later`);
+      agent.add(`We could not find your order number, please let me know if I assist you with anything else.`);
 
     } else {
 
@@ -161,7 +161,7 @@ const agent = new WebhookClient({
 
     try {
       if (current_order_status["records"][0].order_status__c == 'Processing') {
-        const full_address = `${agent.parameters.zipcode_change} ${agent.parameters.streetname_change["street-address"]} #${agent.parameters.doornumber_change}, ${agent.parameters.cityname_change}, ${agent.parameters.state_change}`;
+        const full_address = `${agent.parameters.zipcode_change} ${agent.parameters.streetname_change} #${agent.parameters.doornumber_change}, ${agent.parameters.cityname_change}, ${agent.parameters.state_change}`;
         update_delivery(current_order_status["records"][0].Id, full_address);
         agent.add(`Your address was updated correctly. Is there anything else I can help you with?`);
 
@@ -176,6 +176,7 @@ const agent = new WebhookClient({
   }
 
   async function delivery_date_change_possible(agent) {
+    try{
     const sf_id = await getOrderStatus(agent.contexts[0].parameters.ordernumbercheck);
     const update_status = await update_delivery_date(sf_id["records"][0].Id, (agent.contexts[0].parameters.datechanged).substring(0, 10));
     
@@ -183,6 +184,11 @@ const agent = new WebhookClient({
       agent.add(`The delivery date was updated to ${(agent.contexts[0].parameters.datechanged).substring(0,10)}. Is there anything else I can help you with?`);
 
     } else agent.add("Something went wrong, please try again later.");
+
+  }catch(err){
+    console.log(err);
+    agent.add("Something went wrong on our side, let me know if I can further assist you on anything.")
+  }
 
   }
 
